@@ -8,6 +8,7 @@ mapboxgl.accessToken = config.MAPBOX_ACCESS_TOKEN;
 
 export default function Map() {
 	const [map, setMap] = useState();
+	const [countyData, setCountyData] = useState();
 
 	useEffect(() => {
 		setMap(new mapboxgl.Map({
@@ -43,6 +44,7 @@ export default function Map() {
 		});
 
 		map.on('render', queryCounties);
+		getCountyData();
 	}, [map]);
 
 	const queryCounties = () => {
@@ -53,6 +55,22 @@ export default function Map() {
 		});
 
 		map.off('render', queryCounties);
+	}
+
+	const getCountyData = () => {
+		fetch(config.STRAPI_BASE_URL + '/api/counties?populate=*', {
+			method: 'GET',
+			headers: {
+				'Authorization': 'Bearer ' + config.STRAPI_API_KEY
+			}
+		})
+		.then(response => response.json())
+        .then(data => {
+            console.log(data);
+        })
+        .catch(error => {
+            console.log('Error retrieving data: ', error);
+        })
 	}
 
 	return (
