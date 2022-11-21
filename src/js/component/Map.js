@@ -10,6 +10,11 @@ export default function Map() {
 	const [map, setMap] = useState();
 	const [countyData, setCountyData] = useState();
 
+
+	/**
+	 * Initialize our mapbox map object
+	 */
+
 	useEffect(() => {
 		setMap(new mapboxgl.Map({
 		    container: 'map-container',
@@ -17,47 +22,60 @@ export default function Map() {
 		    zoom: 7,
 		    center: [-86.214326, 35.816163]
 		}));
+
+		getCountyStrapiData();
 	}, []);
+
+
+	/**
+	 * Add tennessee counties onto map
+	 */
 
 	useEffect(() => {
 		if (!map) return;
 
 		map.on('load', () => {
+			// load county data source
 			map.addSource('counties-data', {
 				type: 'geojson',
 				data: tnCountiesData,
 				generateId: true
 			});
 
+			// add the data as a new layer
 			map.addLayer({
 				id: 'tn-counties',
 				source: 'counties-data',
 				type: 'fill',
 				paint: {
-					'fill-opacity': 0.3,
-					'fill-color': '#7c7d7e',
+					'fill-opacity': 0.6,
+					'fill-color': [
+						'case',
+						['>=', ['feature-state', 'activePlots'], 5],
+						'#0a4a1a',
+						['>=', ['feature-state', 'activePlots'], 3],
+						'#168732',
+						['>=', ['feature-state', 'activePlots'], 1],
+						'#21ed54',
+						'#fa7e02'
+					],
 					'fill-antialias': true,
 					'fill-outline-color': '#000'
-
 				}
 			});
 		});
 
-		map.on('render', queryCounties);
-		getCountyData();
-	}, [map]);
+		map.on('render', setCountyActivePlotsFeatureState);
+	}, [map, countyData]);
 
-	const queryCounties = () => {
-		if (!map.getLayer('tn-counties') || !map.loaded()) return;
 
-		let counties = map.queryRenderedFeatures({
-			layers: ['tn-counties']
-		});
+	/**
+	 * Get all county data from strapi
+	 */
 
-		map.off('render', queryCounties);
-	}
+	const getCountyStrapiData = () => {
+		if (countyData) return countyData;
 
-	const getCountyData = () => {
 		fetch(config.STRAPI_BASE_URL + '/api/counties?populate=*', {
 			method: 'GET',
 			headers: {
@@ -66,11 +84,53 @@ export default function Map() {
 		})
 		.then(response => response.json())
         .then(data => {
-            console.log(data);
+            if (data && data.data && data.data.length) {
+            	setCountyData(data.data);
+            }
         })
         .catch(error => {
             console.log('Error retrieving data: ', error);
         })
+	}
+
+
+	/**
+	 * Set county feature state based on active plots
+	 */
+	
+	const setCountyActivePlotsFeatureState = () => {
+		if (!map.getLayer('tn-counties') || !map.loaded() || !countyData) return;
+
+		countyData.forEach(county => {
+			let countyName = county.attributes.countyName;
+			let countyPlots = county.attributes.plots.data || [];
+
+			let mapboxCountyFeature = map.queryRenderedFeatures({
+				layers: ['tn-counties'],
+				filter: ['==', ['get', 'NAME'], countyName]
+			});
+
+			if (mapboxCountyFeature && mapboxCountyFeature[0]) {
+				let activePlots = 0;
+
+				countyPlots.forEach(plot => {
+					if (!plot.attributes.plotSurveyDate) {
+						activePlots++;
+					}
+				});
+
+				map.setFeatureState({
+					source: 'counties-data',
+					id: mapboxCountyFeature[0].id
+				}, {
+					activePlots: activePlots
+				});
+			} else {
+				console.warn('No county feature found with name: ', countyName);
+			}
+		});
+
+		map.off('render', setCountyActivePlotsFeatureState);
 	}
 
 	return (
