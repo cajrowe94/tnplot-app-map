@@ -63,6 +63,16 @@ export default function Map() {
 					'fill-outline-color': '#000'
 				}
 			});
+
+			map.addLayer({
+				id: 'tn-county-labels',
+				source: 'counties-data',
+				type: 'symbol',
+				layout: {
+					'text-field': ['get', 'NAME'],
+					'text-justify': 'auto',
+				}
+			});
 		});
 
 		map.on('render', setCountyActivePlotsFeatureState);
