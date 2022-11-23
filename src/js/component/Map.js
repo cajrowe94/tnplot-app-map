@@ -42,7 +42,7 @@ export default function Map() {
 				generateId: true
 			});
 
-			// add the data as a new layer
+			// add county lines layer
 			map.addLayer({
 				id: 'tn-counties',
 				source: 'counties-data',
@@ -64,6 +64,7 @@ export default function Map() {
 				}
 			});
 
+			// add county name labels layer
 			map.addLayer({
 				id: 'tn-county-labels',
 				source: 'counties-data',
@@ -71,11 +72,20 @@ export default function Map() {
 				layout: {
 					'text-field': ['get', 'NAME'],
 					'text-justify': 'auto',
+					'text-font': ['Raleway SemiBold'],
+					'text-size': 13
+				},
+				paint: {
+					'text-color': '#2b2b2b',
+					'text-halo-color': '#ffffff',
+					'text-halo-width': 1,
+					'text-halo-blur': 1
 				}
 			});
 		});
 
 		map.on('render', setCountyActivePlotsFeatureState);
+		createCountyPopup();
 	}, [map, countyData]);
 
 
@@ -101,6 +111,34 @@ export default function Map() {
         .catch(error => {
             console.log('Error retrieving data: ', error);
         })
+	}
+
+
+	/**
+	 * Create popup for county hover
+	 */
+	
+	const createCountyPopup = () => {
+		if (!map) return;
+
+		const popup = new mapboxgl.Popup({
+			closeButton: false,
+			closeOnClick: false
+		});
+
+		map.on('mousemove', 'tn-counties', (e) => {
+			let mouseLonLat = e.lngLat.wrap();
+			let countyName = e.features[0].properties.NAME;
+
+			map.getCanvas().style.cursor = 'pointer';
+
+			popup.setLngLat(mouseLonLat).setHTML(countyName).addTo(map);
+		});
+
+		map.on('mouseleave', 'tn-counties', () => {
+			map.getCanvas().style.cursor = '';
+			popup.remove();
+		});
 	}
 
 
