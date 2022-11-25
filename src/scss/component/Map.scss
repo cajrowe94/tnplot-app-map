@@ -1,8 +1,21 @@
 @import '../variables.scss';
 
-@media (min-width: $base) {
-	#map-container {
-		width: 100%;
-		height: 100%;
+#map-container {
+	width: 100%;
+	height: 100%;
+}
+
+.county-popup {
+	padding: 10px;
+
+	&__name {
+		font-size: 16px;
+		margin-bottom: 5px;
+		color: #2e2e2e;
+	}
+
+	&__plots {
+		font-size: 14px;
+		color: #2e2e2e;
 	}
 }

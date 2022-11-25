@@ -6,9 +6,10 @@ import tnCountiesData from '../../data/TN_counties.js';
 
 mapboxgl.accessToken = config.MAPBOX_ACCESS_TOKEN;
 
-export default function Map() {
+export default function CountyMap() {
 	const [map, setMap] = useState();
-	const [countyData, setCountyData] = useState();
+	const [countyDataMap, setCountyDataMap] = useState();
+	const [isFetchingData, setIsFetchingData] = useState(false);
 
 
 	/**
@@ -23,7 +24,7 @@ export default function Map() {
 		    center: [-86.214326, 35.816163]
 		}));
 
-		getCountyStrapiData();
+		fetchCountyStrapiData();
 	}, []);
 
 
@@ -85,16 +86,18 @@ export default function Map() {
 		});
 
 		map.on('render', setCountyActivePlotsFeatureState);
-		createCountyPopup();
-	}, [map, countyData]);
+		createCountyMapboxPopup();
+	}, [map, countyDataMap]);
 
 
 	/**
 	 * Get all county data from strapi
 	 */
 
-	const getCountyStrapiData = () => {
-		if (countyData) return countyData;
+	const fetchCountyStrapiData = () => {
+		if (countyDataMap || isFetchingData) return;
+
+		setIsFetchingData(true);
 
 		fetch(config.STRAPI_BASE_URL + '/api/counties?populate=*', {
 			method: 'GET',
@@ -105,11 +108,21 @@ export default function Map() {
 		.then(response => response.json())
         .then(data => {
             if (data && data.data && data.data.length) {
-            	setCountyData(data.data);
+            	// create a map to use for faster lookups
+            	const mapObject = new Map();
+
+				for (let countyObject of data.data) {
+					mapObject.set(countyObject.attributes.countyName.toLowerCase(), countyObject);
+				}
+
+            	setCountyDataMap(mapObject);
             }
+
+            setIsFetchingData(false);
         })
         .catch(error => {
             console.log('Error retrieving data: ', error);
+            setIsFetchingData(false);
         })
 	}
 
@@ -117,8 +130,8 @@ export default function Map() {
 	/**
 	 * Create popup for county hover
 	 */
-	
-	const createCountyPopup = () => {
+
+	const createCountyMapboxPopup = () => {
 		if (!map) return;
 
 		const popup = new mapboxgl.Popup({
@@ -127,12 +140,15 @@ export default function Map() {
 		});
 
 		map.on('mousemove', 'tn-counties', (e) => {
-			let mouseLonLat = e.lngLat.wrap();
 			let countyName = e.features[0].properties.NAME;
+			let mouseLonLat = e.lngLat.wrap();
 
 			map.getCanvas().style.cursor = 'pointer';
 
-			popup.setLngLat(mouseLonLat).setHTML(countyName).addTo(map);
+			let popupHtml = getHtmlForCountyPopup(countyName);
+
+			// create and add popup to map
+			popup.setLngLat(mouseLonLat).setHTML(popupHtml).addTo(map);
 		});
 
 		map.on('mouseleave', 'tn-counties', () => {
@@ -143,13 +159,58 @@ export default function Map() {
 
 
 	/**
+	 * Create and return html for county mapbox popup
+	 * Must send a county name
+	 */
+	
+	const getHtmlForCountyPopup = (countyName) => {
+		if (!countyName || !countyDataMap) return;
+
+		let activePlots = getActivePlotsInCounty(countyName);
+
+		let popupHtml = `
+			<div class="county-popup">
+				<div class="county-popup__name">${countyName} county</div>
+				<div class="county-popup__plots">
+					Plots left: ${activePlots}
+				</div>
+			</div>
+		`;
+
+		return popupHtml;
+	}
+
+
+	/**
+	 * Returns active plots for county
+	 */
+
+	const getActivePlotsInCounty = (countyName) => {
+		if (!countyName || !countyDataMap) return;
+
+		let county = countyDataMap.get(countyName.toLowerCase());
+		let activePlots = 0;
+
+		if (county && county.attributes.plots) {
+			county.attributes.plots.data.forEach(plot => {
+				if (!plot.attributes.plotSurveyDate) {
+					activePlots++;
+				}
+			});
+		}
+
+		return activePlots;
+	}
+
+
+	/**
 	 * Set county feature state based on active plots
 	 */
 	
 	const setCountyActivePlotsFeatureState = () => {
-		if (!map.getLayer('tn-counties') || !map.loaded() || !countyData) return;
+		if (!map.getLayer('tn-counties') || !map.loaded() || !countyDataMap) return;
 
-		countyData.forEach(county => {
+		countyDataMap.forEach(county => {
 			let countyName = county.attributes.countyName;
 			let countyPlots = county.attributes.plots.data || [];
 
