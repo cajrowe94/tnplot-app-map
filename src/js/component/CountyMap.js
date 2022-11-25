@@ -3,6 +3,8 @@ import config from '../../config.js';
 import { useState, useEffect } from 'react';
 import '../../scss/component/Map.scss';
 import tnCountiesData from '../../data/TN_counties.js';
+import SwipeableDrawer from '@mui/material/SwipeableDrawer';
+import CountyDrawer from './CountyDrawer.js';
 
 mapboxgl.accessToken = config.MAPBOX_ACCESS_TOKEN;
 
@@ -49,7 +51,7 @@ export default function CountyMap() {
 				source: 'counties-data',
 				type: 'fill',
 				paint: {
-					'fill-opacity': 0.6,
+					'fill-opacity': 0.8,
 					'fill-color': [
 						'case',
 						['>=', ['feature-state', 'activePlots'], 5],
@@ -243,6 +245,9 @@ export default function CountyMap() {
 	}
 
 	return (
-		<div id="map-container"></div>
+		<>
+			<CountyDrawer countyData={countyDataMap} />
+			<div id="map-container"></div>
+		</>
 	);
 }
