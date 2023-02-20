@@ -1,0 +1,10 @@
+@import '../variables.scss';
+
+.update-plots-button {
+	&__container {
+		z-index: 999;
+		position: absolute;
+		bottom: 20px;
+		left: 20px;
+	}
+}

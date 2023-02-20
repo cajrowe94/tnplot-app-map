@@ -1,7 +1,5 @@
-@import '../variables.scss';
-
-@media (min-width: $base) {
-	.map-layer {
-		
+.map-layer {
+	.mapboxgl-ctrl {
+		display: none !important;
 	}
 }

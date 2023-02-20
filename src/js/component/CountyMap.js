@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl';
 import { useState, useEffect } from 'react';
-import '../../scss/component/Map.scss';
+import '../../scss/component/CountyMap.scss';
 import tnCountiesData from '../../data/TN_counties.js';
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
