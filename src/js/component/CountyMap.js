@@ -1,12 +1,9 @@
 import mapboxgl from 'mapbox-gl';
-import config from '../../config.js';
 import { useState, useEffect } from 'react';
 import '../../scss/component/Map.scss';
 import tnCountiesData from '../../data/TN_counties.js';
-import SwipeableDrawer from '@mui/material/SwipeableDrawer';
-import CountyDrawer from './CountyDrawer.js';
 
-mapboxgl.accessToken = config.MAPBOX_ACCESS_TOKEN;
+mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 
 export default function CountyMap() {
 	const [map, setMap] = useState();
@@ -26,7 +23,7 @@ export default function CountyMap() {
 		    center: [-86.214326, 35.816163]
 		}));
 
-		fetchCountyStrapiData();
+		fetchCountyData();
 	}, []);
 
 
@@ -38,53 +35,60 @@ export default function CountyMap() {
 		if (!map) return;
 
 		map.on('load', () => {
+
 			// load county data source
-			map.addSource('counties-data', {
-				type: 'geojson',
-				data: tnCountiesData,
-				generateId: true
-			});
+			if (!map.getSource('counties-data')) {
+				map.addSource('counties-data', {
+					type: 'geojson',
+					data: tnCountiesData,
+					generateId: true
+				});
+			}
 
 			// add county lines layer
-			map.addLayer({
-				id: 'tn-counties',
-				source: 'counties-data',
-				type: 'fill',
-				paint: {
-					'fill-opacity': 0.8,
-					'fill-color': [
-						'case',
-						['>=', ['feature-state', 'activePlots'], 5],
-						'#0a4a1a',
-						['>=', ['feature-state', 'activePlots'], 3],
-						'#168732',
-						['>=', ['feature-state', 'activePlots'], 1],
-						'#21ed54',
-						'#fa7e02'
-					],
-					'fill-antialias': true,
-					'fill-outline-color': '#000'
-				}
-			});
+			if (!map.getLayer('tn-counties')) {
+				map.addLayer({
+					id: 'tn-counties',
+					source: 'counties-data',
+					type: 'fill',
+					paint: {
+						'fill-opacity': 0.8,
+						'fill-color': [
+							'case',
+							['>=', ['feature-state', 'activePlots'], 5],
+							'#0a4a1a',
+							['>=', ['feature-state', 'activePlots'], 3],
+							'#168732',
+							['>=', ['feature-state', 'activePlots'], 1],
+							'#21ed54',
+							'#fa7e02'
+						],
+						'fill-antialias': true,
+						'fill-outline-color': '#000'
+					}
+				});
+			}
 
 			// add county name labels layer
-			map.addLayer({
-				id: 'tn-county-labels',
-				source: 'counties-data',
-				type: 'symbol',
-				layout: {
-					'text-field': ['get', 'NAME'],
-					'text-justify': 'auto',
-					'text-font': ['Raleway SemiBold'],
-					'text-size': 13
-				},
-				paint: {
-					'text-color': '#2b2b2b',
-					'text-halo-color': '#ffffff',
-					'text-halo-width': 1,
-					'text-halo-blur': 1
-				}
-			});
+			if (!map.getLayer('tn-county-labels')) {
+				map.addLayer({
+					id: 'tn-county-labels',
+					source: 'counties-data',
+					type: 'symbol',
+					layout: {
+						'text-field': ['get', 'NAME'],
+						'text-justify': 'auto',
+						'text-font': ['Raleway SemiBold'],
+						'text-size': 13
+					},
+					paint: {
+						'text-color': '#2b2b2b',
+						'text-halo-color': '#ffffff',
+						'text-halo-width': 1,
+						'text-halo-blur': 1
+					}
+				});
+			}
 		});
 
 		map.on('render', setCountyActivePlotsFeatureState);
@@ -96,25 +100,25 @@ export default function CountyMap() {
 	 * Get all county data from strapi
 	 */
 
-	const fetchCountyStrapiData = () => {
+	const fetchCountyData = () => {
 		if (countyDataMap || isFetchingData) return;
 
 		setIsFetchingData(true);
 
-		fetch(config.STRAPI_BASE_URL + '/api/counties?populate=*', {
+		fetch(`${process.env.REACT_APP_API_BASE_URL}/api/counties`, {
 			method: 'GET',
 			headers: {
-				'Authorization': 'Bearer ' + config.STRAPI_API_KEY
+				'api_key': process.env.REACT_APP_TNMAP_API_KEY
 			}
 		})
 		.then(response => response.json())
         .then(data => {
-            if (data && data.data && data.data.length) {
+            if (data && data.results && data.results.length) {
             	// create a map to use for faster lookups
             	const mapObject = new Map();
 
-				for (let countyObject of data.data) {
-					mapObject.set(countyObject.attributes.countyName.toLowerCase(), countyObject);
+				for (let countyObject of data.results) {
+					mapObject.set(countyObject.county_name.toLowerCase().replace(' ', '_'), countyObject);
 				}
 
             	setCountyDataMap(mapObject);
@@ -123,7 +127,6 @@ export default function CountyMap() {
             setIsFetchingData(false);
         })
         .catch(error => {
-            console.log('Error retrieving data: ', error);
             setIsFetchingData(false);
         })
 	}
@@ -190,12 +193,12 @@ export default function CountyMap() {
 	const getActivePlotsInCounty = (countyName) => {
 		if (!countyName || !countyDataMap) return;
 
-		let county = countyDataMap.get(countyName.toLowerCase());
+		let county = countyDataMap.get(countyName.toLowerCase().replace(' ', '_'));
 		let activePlots = 0;
 
-		if (county && county.attributes.plots) {
-			county.attributes.plots.data.forEach(plot => {
-				if (!plot.attributes.plotSurveyDate) {
+		if (county && county.plots) {
+			county.plots.forEach(plot => {
+				if (!plot.plot_survey_date) {
 					activePlots++;
 				}
 			});
@@ -213,19 +216,21 @@ export default function CountyMap() {
 		if (!map.getLayer('tn-counties') || !map.loaded() || !countyDataMap) return;
 
 		countyDataMap.forEach(county => {
-			let countyName = county.attributes.countyName;
-			let countyPlots = county.attributes.plots.data || [];
-
-			let mapboxCountyFeature = map.queryRenderedFeatures({
-				layers: ['tn-counties'],
-				filter: ['==', ['get', 'NAME'], countyName]
-			});
+			let countyName = county.county_name;
+			let countyPlots = county.plots || [];
+			
+			let mapboxCountyFeature = map.querySourceFeatures(
+				'counties-data',
+				{
+					filter: ['==', ['get', 'NAME'], countyName]
+				}
+			);
 
 			if (mapboxCountyFeature && mapboxCountyFeature[0]) {
 				let activePlots = 0;
 
 				countyPlots.forEach(plot => {
-					if (!plot.attributes.plotSurveyDate) {
+					if (!plot.plot_survey_date) {
 						activePlots++;
 					}
 				});
@@ -246,7 +251,6 @@ export default function CountyMap() {
 
 	return (
 		<>
-			<CountyDrawer countyData={countyDataMap} />
 			<div id="map-container"></div>
 		</>
 	);

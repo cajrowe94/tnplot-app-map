@@ -1,13 +1,14 @@
-@import '@fontsource/roboto/300.css';
-@import '@fontsource/roboto/400.css';
-@import '@fontsource/roboto/500.css';
-@import '@fontsource/roboto/700.css';
+@import '@fontsource/poppins/300.css';
+@import '@fontsource/poppins/400.css';
+@import '@fontsource/poppins/500.css';
+@import '@fontsource/poppins/700.css';
 
 html,
 body,
 main,
 #root,
 .layer {
+	font-family: 'Poppins';
 	margin: 0;
 	padding: 0;
 	width: 100%;
