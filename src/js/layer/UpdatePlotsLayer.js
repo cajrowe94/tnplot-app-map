@@ -1,8 +1,6 @@
-import { useState, useEffect, forwardRef } from 'react';
+import { useState, forwardRef } from 'react';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
-import FileUploadIcon from '@mui/icons-material/FileUpload';
-import Button from '@mui/material/Button';
 import LoadingButton from '@mui/lab/LoadingButton';
 import { styled } from '@mui/material/styles';
 import '../../scss/layer/UpdatePlotsLayer.scss';
@@ -17,12 +15,12 @@ const CustomTypography = styled(Typography)({
 const UpdatePlotsLayer = forwardRef((props, ref) => {
 	const [isLoading, setIsLoading] = useState(false);
 	const [submitDisabled, setSubmitDisabled] = useState(true);
+	const [updateData, setUpdateData] = useState([]);
+
 	const { disableButton, ...rest } = props;
 
 	const postFileUpload = () => {
 		setIsLoading(true);
-
-		let fileUploadInput = document.getElementById('xlsx-file-input');
 
 		let formData = new FormData(document.getElementById('update-form'));       
 
@@ -35,10 +33,11 @@ const UpdatePlotsLayer = forwardRef((props, ref) => {
 		})
 		.then(response => response.json())
         .then(data => {
-        	console.log(data);
+        	setUpdateData(data);
             setIsLoading(false);
         })
         .catch(error => {
+        	console.log(`error: ${error}`);
             setIsLoading(false);
         })
 	}
@@ -90,6 +89,36 @@ const UpdatePlotsLayer = forwardRef((props, ref) => {
 							</LoadingButton>
 						</div>
 					</form>
+				</div>
+
+				<div className="update-plots-results">
+					{
+						updateData.map((result, i) => {
+							if (result.error) {
+								return (
+									<div key={ i } className="update-plots-results__row error">
+										<p>{ result.error }</p>
+									</div>
+								)
+							} else if (result.updates && result.updates.plot && result.updates.plot.messages) {
+								return (
+									<div key={ i } className="update-plots-results__row">
+										{
+											result.updates.plot.messages.map((message, i) => {
+												return (
+													<div key={ i } className="update-plots-results__row-message">
+														<p>{ message }</p>
+													</div>
+												)
+											})
+										}
+									</div>
+								)
+							}
+
+							return ''
+						})
+					}
 				</div>
 			</Container>
 		</div>

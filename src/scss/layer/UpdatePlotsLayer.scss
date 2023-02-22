@@ -10,3 +10,25 @@
 .update-plots-form {
 	margin-top: 10px;
 }
+
+.update-plots-results {
+	margin-top: 20px;
+	padding: 20px 0;
+	max-height: 500px;
+	overflow-y: auto;
+
+	&__row {
+		padding: 15px 0;
+		border-top: 1px solid #dfdfdf;
+
+		p {
+			margin: 0;
+		}
+
+		&.error {
+			p {
+				color: #ac0000;
+			}
+		}
+	}
+}
