@@ -59,12 +59,12 @@ export default function CountyMap() {
 						'fill-color': [
 							'case',
 							['>=', ['feature-state', 'activePlots'], 5],
-							'#0a4a1a',
+							'#084016',
 							['>=', ['feature-state', 'activePlots'], 3],
 							'#168732',
 							['>=', ['feature-state', 'activePlots'], 1],
-							'#21ed54',
-							'#fa7e02'
+							'#79f57d',
+							'#fcfcfd'
 						],
 						'fill-antialias': true,
 						'fill-outline-color': '#000'
